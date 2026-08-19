@@ -199,32 +199,47 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.get("/.well-known/agent-card.json")
 def agent_card():
     return {
-        "name": "Rafael Romero Negrete- Agente de CV",
-        "description": "Agente conversacional que representa el perfil profesional de Rafael Romero Negrete, proporcionando información sobre su experiencia, formación, habilidades y proyectos de Inteligencia Artificial Generativa.",
+        "name": "Rafael Romero Negrete - Agente de CV",
+        "description": (
+            "Agente conversacional que representa el perfil profesional "
+            "de Rafael Romero Negrete, proporcionando información sobre su "
+            "experiencia, formación, habilidades y proyectos de "
+            "Inteligencia Artificial Generativa."
+        ),
         "version": "1.0.0",
-        "url": "https://cv-rafael-romero-agent.onrender.com",
+        "supportedInterfaces": [
+            {
+                "url": "https://cv-rafael-romero-agent.onrender.com",
+                "protocolBinding": "HTTP+JSON",
+                "protocolVersion": "1.0"
+            }
+        ],
         "capabilities": {
             "streaming": False,
             "pushNotifications": False
         },
-        "defaultInputModes": [
-            "text/plain"
-        ],
-        "defaultOutputModes": [
-            "text/plain"
-        ],
+        "defaultInputModes": ["text/plain"],
+        "defaultOutputModes": ["text/plain"],
         "skills": [
             {
                 "id": "professional-profile",
                 "name": "Perfil profesional",
-                "description": "Responde preguntas sobre la trayectoria profesional, formación, experiencia, habilidades y proyectos de Rafael Romero.",
+                "description": (
+                    "Responde preguntas sobre la trayectoria profesional, "
+                    "formación, experiencia, habilidades y proyectos de "
+                    "Rafael Romero Negrete."
+                ),
                 "tags": [
                     "CV",
                     "Inteligencia Artificial Generativa",
                     "experiencia profesional",
                     "proyectos"
+                ],
+                "examples": [
+                    "¿Qué experiencia tiene Rafael en Inteligencia Artificial Generativa?",
+                    "¿Cuáles son los proyectos más relevantes de Rafael?",
+                    "¿Qué tecnologías de IA conoce Rafael?"
                 ]
             }
-        ],
-        "openResponsesUrl": "https://cv-rafael-romero-agent.onrender.com/v1/responses"
+        ]
     }
