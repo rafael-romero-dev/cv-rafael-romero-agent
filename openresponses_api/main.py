@@ -67,6 +67,18 @@ def _extract_conversation(payload: ResponsesRequest) -> tuple[str, str]:
     'user' como la pregunta a responder, y todo lo anterior como contexto
     de historial para que el agente pueda resolver referencias como
     "cuéntame más" sin mantener estado en el servidor.
+
+    IMPORTANTE: esta función NUNCA lanza error. Plataformas que consumen
+    Open Responses suelen hacer una llamada de validación/health-check al
+    registrar el agente (con `input` vacío, o sin ningún mensaje de rol
+    "user"), solo para confirmar que el endpoint responde correctamente
+    antes de dejar guardarlo. Si en ese caso devolviéramos un 400/500, la
+    plataforma podría no saber manejar el error (como ya vimos que pasa
+    aquí) e impedir que el agente se registre. Por eso, ante cualquier
+    forma "no estándar" de `input`, se hace lo mejor posible en vez de
+    fallar: se usa el último mensaje disponible (sea cual sea su rol), o
+    una pregunta vacía si no hay ningún mensaje, dejando que la capa de
+    generación responda con un saludo/introducción genérica.
     """
     if isinstance(payload.input, str):
         return "", payload.input
@@ -74,13 +86,19 @@ def _extract_conversation(payload: ResponsesRequest) -> tuple[str, str]:
     def _text_of(content) -> str:
         if isinstance(content, str):
             return content
+        if not content:
+            return ""
         texts = []
         for block in content:
-            if isinstance(block, dict) and block.get("type") in ("input_text", "text"):
+            if isinstance(block, dict) and block.get("type") in ("input_text", "text", "output_text"):
                 texts.append(block.get("text", ""))
         return "\n".join(texts)
 
-    # Encuentra el índice del último mensaje de usuario -> es la pregunta actual
+    if not payload.input:
+        # input = [] (p. ej. llamada de validación de la plataforma al registrar el agente)
+        return "", ""
+
+    # Encuentra el índice del último mensaje de usuario -> es la pregunta actual.
     last_user_idx = None
     for idx in range(len(payload.input) - 1, -1, -1):
         if payload.input[idx].role == "user":
@@ -88,12 +106,10 @@ def _extract_conversation(payload: ResponsesRequest) -> tuple[str, str]:
             break
 
     if last_user_idx is None:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": {"message": "No user message found in 'input'",
-                               "type": "invalid_request", "param": "input",
-                               "code": "invalid_input"}},
-        )
+        # No hay ningún mensaje con role="user" (roles inesperados, mensaje de
+        # sistema únicamente, etc.). En vez de fallar, se usa el último mensaje
+        # disponible, sea cual sea su rol, como mejor aproximación a "la pregunta".
+        last_user_idx = len(payload.input) - 1
 
     question = _text_of(payload.input[last_user_idx].content)
 
@@ -175,14 +191,27 @@ async def create_response(payload: ResponsesRequest, authorization: Optional[str
 
     history, question = _extract_conversation(payload)
 
-    try:
-        answer_text = answer_question(question, history=history)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status_code=500,
-            detail={"error": {"message": f"Error procesando la consulta: {exc}",
-                               "type": "model_error", "code": "generation_failed"}},
+    if not question.strip():
+        # Llamada de validación/health-check de la plataforma (input vacío o
+        # sin texto real): respondemos algo válido y liviano sin invocar todo
+        # el pipeline RAG (que no tiene sentido con una consulta vacía).
+        answer_text = (
+            "¡Hola! Soy el agente conversacional de CV de Rafael Romero "
+            "Negrete. Puedo contarte sobre su experiencia profesional, "
+            "proyectos, certificaciones y habilidades técnicas. "
+            "¿Qué te gustaría saber?"
         )
+    else:
+        try:
+            answer_text = answer_question(question, history=history)
+        except Exception as exc:  # noqa: BLE001
+            # Igual que arriba: preferimos responder algo coherente antes que
+            # devolver un error que la plataforma consumidora no sepa renderizar.
+            answer_text = (
+                "En este momento tuve un problema para consultar la "
+                "información de Rafael. ¿Puedes intentar reformular tu "
+                "pregunta o preguntar de nuevo en unos segundos?"
+            )
 
     response_id = f"resp_{uuid.uuid4().hex}"
     return _build_response_object(response_id, payload.model, answer_text)
@@ -195,51 +224,3 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": {"message": str(exc), "type": "server_error", "code": "internal_error"}},
     )
-
-@app.get("/.well-known/agent-card.json")
-def agent_card():
-    return {
-        "name": "Rafael Romero Negrete - Agente de CV",
-        "description": (
-            "Agente conversacional que representa el perfil profesional "
-            "de Rafael Romero Negrete, proporcionando información sobre su "
-            "experiencia, formación, habilidades y proyectos de "
-            "Inteligencia Artificial Generativa."
-        ),
-        "version": "1.0.0",
-        "supportedInterfaces": [
-            {
-                "url": "https://cv-rafael-romero-agent.onrender.com",
-                "protocolBinding": "HTTP+JSON",
-                "protocolVersion": "1.0"
-            }
-        ],
-        "capabilities": {
-            "streaming": False,
-            "pushNotifications": False
-        },
-        "defaultInputModes": ["text/plain"],
-        "defaultOutputModes": ["text/plain"],
-        "skills": [
-            {
-                "id": "professional-profile",
-                "name": "Perfil profesional",
-                "description": (
-                    "Responde preguntas sobre la trayectoria profesional, "
-                    "formación, experiencia, habilidades y proyectos de "
-                    "Rafael Romero Negrete."
-                ),
-                "tags": [
-                    "CV",
-                    "Inteligencia Artificial Generativa",
-                    "experiencia profesional",
-                    "proyectos"
-                ],
-                "examples": [
-                    "¿Qué experiencia tiene Rafael en Inteligencia Artificial Generativa?",
-                    "¿Cuáles son los proyectos más relevantes de Rafael?",
-                    "¿Qué tecnologías de IA conoce Rafael?"
-                ]
-            }
-        ]
-    }
