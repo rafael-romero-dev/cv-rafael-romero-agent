@@ -1,0 +1,27 @@
+# Entornos y secretos
+.env
+.env.local
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Datos personales sensibles (mantener fuera del repo público si se desea)
+# Descomenta la siguiente línea si NO quieres subir tus PDFs y certificados originales:
+# data/
+
+# Chroma / vector store (puede pesar mucho; opcional excluirlo y regenerarlo en el deploy)
+# chroma_db/
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+chroma_db/
