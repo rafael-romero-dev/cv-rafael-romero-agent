@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 if [ ! -d "/app/chroma_db" ]; then
     echo "Creando base vectorial Chroma..."
