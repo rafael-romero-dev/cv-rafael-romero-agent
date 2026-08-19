@@ -156,6 +156,23 @@ def _build_response_object(response_id: str, model: str, text: str) -> dict:
 
 # ---------- Rutas ----------
 
+@app.get("/")
+def root():
+    """
+    Ruta raíz. Algunas plataformas (incluida la de este reto, según se
+    observó en los logs de despliegue) hacen un chequeo básico de
+    disponibilidad con GET a la raíz del dominio ANTES de intentar
+    registrar o probar el endpoint real (/v1/responses). Sin esta ruta,
+    ese chequeo recibía 404 y el registro del agente fallaba.
+    """
+    return {
+        "status": "ok",
+        "service": "CV Agent - Rafael Romero Negrete",
+        "spec": "Open Responses",
+        "endpoint": "/v1/responses",
+    }
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
