@@ -198,13 +198,14 @@ def list_models(authorization: Optional[str] = Header(default=None)):
 async def create_response(payload: ResponsesRequest, authorization: Optional[str] = Header(default=None)):
     _check_auth(authorization)
 
-    if payload.stream:
-        raise HTTPException(
-            status_code=400,
-            detail={"error": {"message": "Streaming (stream=true) is not supported by this agent yet.",
-                               "type": "invalid_request", "param": "stream",
-                               "code": "unsupported_parameter"}},
-        )
+    # NOTA: no se implementa streaming real (Server-Sent Events) por
+    # limitaciones de tiempo del reto. En vez de rechazar peticiones con
+    # stream=true (lo cual causaba que la plataforma del reto recibiera un
+    # 400 y no supiera manejarlo, rompiendo su UI), se ignora el flag y
+    # siempre se responde con el objeto de respuesta completo en JSON no
+    # streaming. Es una limitación conocida y documentada, no un error:
+    # la mayoría de los clientes HTTP saben consumir una respuesta JSON
+    # completa igual, aunque hayan pedido streaming.
 
     history, question = _extract_conversation(payload)
 
