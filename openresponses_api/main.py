@@ -73,12 +73,11 @@ def _extract_conversation(payload: ResponsesRequest) -> tuple[str, str]:
     registrar el agente (con `input` vacío, o sin ningún mensaje de rol
     "user"), solo para confirmar que el endpoint responde correctamente
     antes de dejar guardarlo. Si en ese caso devolviéramos un 400/500, la
-    plataforma podría no saber manejar el error (como ya vimos que pasa
-    aquí) e impedir que el agente se registre. Por eso, ante cualquier
-    forma "no estándar" de `input`, se hace lo mejor posible en vez de
-    fallar: se usa el último mensaje disponible (sea cual sea su rol), o
-    una pregunta vacía si no hay ningún mensaje, dejando que la capa de
-    generación responda con un saludo/introducción genérica.
+    plataforma podría no saber manejar el error e impedir que el agente 
+    se registre. Por eso, ante cualquier forma "no estándar" de `input`,
+    se hace lo mejor posible en vez de fallar: se usa el último mensaje 
+    disponible (sea cual sea su rol), o una pregunta vacía si no hay 
+    ningún mensaje, dejando que la capa de generación responda con un saludo/introducción genérica.
     """
     if isinstance(payload.input, str):
         return "", payload.input
@@ -159,11 +158,10 @@ def _build_response_object(response_id: str, model: str, text: str) -> dict:
 @app.get("/")
 def root():
     """
-    Ruta raíz. Algunas plataformas (incluida la de este reto, según se
-    observó en los logs de despliegue) hacen un chequeo básico de
+    Ruta raíz. Algunas plataformas hacen un chequeo básico de
     disponibilidad con GET a la raíz del dominio ANTES de intentar
-    registrar o probar el endpoint real (/v1/responses). Sin esta ruta,
-    ese chequeo recibía 404 y el registro del agente fallaba.
+    registrar o probar el endpoint real (/v1/responses). 
+
     """
     return {
         "status": "ok",
@@ -197,15 +195,6 @@ def list_models(authorization: Optional[str] = Header(default=None)):
 @app.post("/v1/responses")
 async def create_response(payload: ResponsesRequest, authorization: Optional[str] = Header(default=None)):
     _check_auth(authorization)
-
-    # NOTA: no se implementa streaming real (Server-Sent Events) por
-    # limitaciones de tiempo del reto. En vez de rechazar peticiones con
-    # stream=true (lo cual causaba que la plataforma del reto recibiera un
-    # 400 y no supiera manejarlo, rompiendo su UI), se ignora el flag y
-    # siempre se responde con el objeto de respuesta completo en JSON no
-    # streaming. Es una limitación conocida y documentada, no un error:
-    # la mayoría de los clientes HTTP saben consumir una respuesta JSON
-    # completa igual, aunque hayan pedido streaming.
 
     history, question = _extract_conversation(payload)
 
