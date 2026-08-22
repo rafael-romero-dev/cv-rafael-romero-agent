@@ -62,11 +62,7 @@ CV_Agente/
   mismo pipeline de recuperación y el mismo prompt alimentan tanto la app
   de Streamlit como el endpoint Open Responses, para que ambas superficies
   respondan de forma consistente. 
-- **Verificación de coherencia**: antes de desplegar, se probó el endpoint
-  localmente con `TestClient` (mockeando el LLM) para validar el contrato
-  HTTP, y después con Gemini real para confirmar que las respuestas citan
-  correctamente las fuentes y no alucinan información fuera de los
-  documentos.
+- **Verificación de coherencia**: se realizaron pruebas locales del endpoint para validar su funcionamiento y el formato de las solicitudes y respuestas. Posteriormente, se verificó el servicio desplegado mediante solicitudes curl al endpoint público, comprobando que el agente procesara correctamente las consultas y generara respuestas coherentes basadas en la información disponible.
 
 ## Cómo correrlo
 
